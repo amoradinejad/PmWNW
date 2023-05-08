@@ -24,7 +24,7 @@ import scipy.integrate as integrate
 
 
 
-class EHFit:
+class EHFits:
     """
     This class computes the all the necasssary functions for computing the Eisentein-Hu fit for 
     wiggle and no-wiggle components of the matter power spectrum.
