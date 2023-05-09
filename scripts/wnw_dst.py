@@ -1,10 +1,16 @@
+
+
+"""
+Developed by Azadeh Moradinezhad Dizgah, 2020
+
+This script performs the the wiggle no-wiggle split using spectral method decomposition.
+See arXiv:1003.3999 for more details on the algorithm and arXiv:1712.08067 for its application.
+
+
+"""
+
 #!/usr/bin/env python
 # coding: utf-8
-
-import broadband_extraction as broadband_ben
-import wiggle_nowiggle_BSpline as wnw_BSpline
-import wiggle_nowiggle_Gfilter as wnw_Gfilter
-import EH_fit as EH
 
 import sys, platform, os
 import scipy.fftpack as fft
@@ -20,29 +26,14 @@ from scipy.signal import find_peaks_cwt
 from scipy.signal import gaussian
 from scipy.signal import convolve
 
-FILE = 1
-CAMB = 2
 
-sys.path.insert(0,os.path.realpath(os.path.join(os.getcwd(),'..')))
+def pk_dst_nw(k, pk_camb): 
+# k       : wavenumber over which we want to compute the nw spectrum 
+# kf      : an array over which to interpolate,
+# pkf_lin : the linear matter power spectrum array for the kf
 
-ka, pka       = np.loadtxt('/Volumes/Data/Documents/Git/gc-wp-nonlinear/linear_spectra_flagship/matter/high_res/flagship_linear_cb_hr_matterpower_z0p0.dat',unpack=True)
-logpka        = np.log10(pka)
-logka         = np.log10(ka)
-logpka_interp = InterpolatedUnivariateSpline(logka,logpka,k=3)
-
-
-def pk_interp(k):
-    logk = np.log10(k)
-    return 10.**logpka_interp(logk)
-
-
-def pk_dst_nw(k, pk_camb, pk_switch): 
-##  k       : wavenumber over which we want to compute the nw spectrum 
-### kf      : an array over which to interpolate,
-##  pkf_lin : the linear matter power spectrum array for the kf
-
-### The numer of points and sample spacing, as well as kmax, should be chosen 
-### such that the sine transform of the PS does not show ringing bbehavior
+      # The numer of points and sample spacing, as well as kmax, should be chosen 
+      # such that the sine transform of the PS does not show ringing bbehavior
       count = 0
       while count<1:
             N    = 2**16   #number of sample points  
@@ -50,12 +41,8 @@ def pk_dst_nw(k, pk_camb, pk_switch):
             kmin = 1.e-4
             kmax = 10.
 
-            kf    = np.linspace(kmin, kmax, N)
-            if(pk_switch == FILE):
-                  grid  = np.log10(kf*pk_interp(kf))
-            elif (pk_switch == CAMB):      
-                  grid  = np.log10(kf*pk_camb.P(0,kf))
-
+            kf    = np.linspace(kmin, kmax, N)    
+            grid  = np.log10(kf*pk_camb.P(0,kf))
 
             # 3 - Perform a fast sine transform of the $\log(kP(k))$-array using the orthonomralized type-II sine transform. Denoting the index of the resulting array by $i$, split the even and off entries. i.e. those entries with even $i$ and odd $i$, into separate arrays.
             grid_sine  = fft.dst(grid, type=2, norm="ortho")
@@ -73,10 +60,10 @@ def pk_dst_nw(k, pk_camb, pk_switch):
             odd_freq  = grid_freqs[1:len(grid_freqs):2]
 
 
-            even_freq = np.fft.fftshift(even_freq)
-            even_ind  = np.fft.fftshift(even_ind)
-            odd_freq  = np.fft.fftshift(odd_freq)
-            odd_ind   = np.fft.fftshift(odd_ind)
+            even_freq = fft.fftshift(even_freq)
+            even_ind  = fft.fftshift(even_ind)
+            odd_freq  = fft.fftshift(odd_freq)
+            odd_ind   = fft.fftshift(odd_ind)
 
 
             # 4 - Linearly interpolate the two arrays separately using cubic splines.
@@ -161,16 +148,16 @@ def pk_dst_nw(k, pk_camb, pk_switch):
             ind_arr_e = np.arange(0, len(even_cut),1)
             ind_arr_o = np.arange(0, len(odd_cut),1)
 
-            ### REscaling suggested to reduce the noise
-            even_cut_resc = (freq_cute + 1.)**2. * even_cut
-            odd_cut_resc  = (freq_cuto + 1.)**2. * odd_cut
+            ### Rescaling suggested to reduce the noise
+            even_cut_resc = (freq_cute + 1)**2 * even_cut
+            odd_cut_resc  = (freq_cuto + 1)**2 * odd_cut
 
 
             even_resc = splrep(freq_cute, even_cut_resc, s=0,k=3)
             odd_resc  = splrep(freq_cuto, odd_cut_resc, s=0,k=3)
 
-            freqe = np.linspace(min(freq_cute), max(freq_cute), N/2)
-            freqo = np.linspace(min(freq_cuto), max(freq_cuto), N/2)
+            freqe = np.linspace(min(freq_cute), max(freq_cute), int(N/2))
+            freqo = np.linspace(min(freq_cuto), max(freq_cuto), int(N/2))
 
             even_interp = splev(freqe, even_resc, der=0)
             odd_interp  = splev(freqo, odd_resc, der=0)
